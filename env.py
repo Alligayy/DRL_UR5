@@ -244,8 +244,10 @@ class UR5RobotiqEnv(gym.Env):
         # 计算避障奖励
         if dis_oe > 0.3:    # 安全区
             r_obstacle = r_safe = math.exp(-dis_ge)-math.exp(-dis_oe)
-        elif dis_oe < 0.1:  # 危险区
-            r_obstacle = r_danger = math.log(dis_oe)  # 
+        elif 0 < dis_oe < 0.1:  # 危险区
+            r_obstacle = r_danger = math.log(dis_oe)  
+        elif dis_oe <= 0:       # 发生碰撞，给个极小的负奖励
+            r_obstacle = -500
         else:               # 警告区
             r_safe = math.exp(-dis_ge)-math.exp(-dis_oe)
             r_danger = math.log(dis_oe)
