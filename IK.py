@@ -2,20 +2,20 @@ import numpy as np
 
 # D-H 参数
 dh_params = [
-    [0, 89.15,  0,  np.pi / 2],
-    [0, 0,   -425,          0],
-    [0, 0,    236,          0],
-    [0, 109.15, 0,  np.pi / 2],
-    [0, 94.65,  0, -np.pi / 2],
-    [0, 82.30,  0,          0]
+    [0, 0.089,  0,  np.pi / 2],
+    [0, 0,   -0.425,          0],
+    [0, 0,    0.236,          0],
+    [0, 0.109,  0,  np.pi / 2],
+    [0, 0.094,  0, -np.pi / 2],
+    [0, 0.082,  0,          0]
 ]
 
 def transformation_matrix(theta, d, a, alpha):
     """生成单个关节的变换矩阵"""
     return np.array([
-        [np.cos(theta), -np.sin(theta) * np.cos(alpha), np.sin(theta) * np.sin(alpha), a * np.cos(theta)],
-        [np.sin(theta), np.cos(theta) * np.cos(alpha), -np.cos(theta) * np.sin(alpha), a * np.sin(theta)],
-        [0, np.sin(alpha), np.cos(alpha), d],
+        [np.cos(theta),     -np.sin(theta) * np.cos(alpha),     np.sin(theta) * np.sin(alpha),     a * np.cos(theta)],
+        [np.sin(theta),      np.cos(theta) * np.cos(alpha),    -np.cos(theta) * np.sin(alpha),     a * np.sin(theta)],
+        [            0,      np.sin(alpha),                     np.cos(alpha),                     d],
         [0, 0, 0, 1]
     ])
 
