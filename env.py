@@ -6,7 +6,6 @@ import numpy as np
 import time
 import math
 
-
 from ur5_robot import UR5Robotiq85  # Import the UR5Robotiq85 class from ur5_robot.py
 
 class UR5RobotiqEnv(gym.Env):
@@ -124,25 +123,6 @@ class UR5RobotiqEnv(gym.Env):
 
         return np.array(obstacle_pos)
     
-    def _obstacle_random_move(self, current_obstacle_pos): 
-        """
-        障碍物随机运动
-        """
-        x_range = [-0.4, 0.3]#障碍物生成区域
-        y_range = [0.3, 0.8]
-        #
-        x_move = [-0.01, 0.01]
-        y_move = [-0.01, 0.01]
-        new_obstacle_pos = [
-            current_obstacle_pos[0] + np.random.uniform(x_move[0], x_move[1]),  
-            current_obstacle_pos[1] + np.random.uniform(y_move[0], y_move[1]),  
-            current_obstacle_pos[2]]
-
-        new_obstacle_pos[0] = (max(x_range[0], min(x_range[1], new_obstacle_pos[0])))# 限制障碍物范围
-        new_obstacle_pos[1] = (max(y_range[0], min(y_range[1], new_obstacle_pos[1])))
-         # 更新障碍物位置
-        return np.array(new_obstacle_pos)
-
     def _get_joint_states(self):
         """
         获取关节状态
@@ -316,6 +296,36 @@ class UR5RobotiqEnv(gym.Env):
             time.sleep(self.dt)
         
         return controllable_joints_angles  # 返回计算得到的关节角度
+    def create_custom_sphere(self,position, color, radius, mass=0):#创建自定义球体
+        """
+        创建自定义球体
+        :param radius: 球体半径
+        :param mass: 球体质量
+        :param position: 球体位置 [x, y, z]
+        :param color: 球体颜色 [r, g, b, a]
+        :return: 球体对象ID
+        """
+        collision_shape_id = p.createCollisionShape(p.GEOM_SPHERE, radius=radius)
+        visual_shape_id = p.createVisualShape(p.GEOM_SPHERE, radius=radius, rgbaColor=color)
+        sphere_id = p.createMultiBody(
+            baseMass=mass,
+            baseCollisionShapeIndex=collision_shape_id,
+            baseVisualShapeIndex=visual_shape_id,
+            basePosition=position
+        )
+        return sphere_id
+
+    def set_sphere_velocity(self, sphere_id, linear_velocity=[0.02, 0, 0]):
+        """
+        给指定的小球设置线速度
+        :param sphere_id: 小球对象ID
+        :param linear_velocity: 线速度向量 [vx, vy, vz]
+        """
+        p.resetBaseVelocity(
+            objectUniqueId=sphere_id,
+            linearVelocity=linear_velocity
+        )
+
 
     def reset(self, seed=None, options=None):
         """
@@ -341,27 +351,24 @@ class UR5RobotiqEnv(gym.Env):
         self.target_position = self._generate_random_target()
         self.obstacle_position = self._generate_random_obstacle() # 生成随机障碍物位置
         
-        #画出目标位置小球
-        ball_visual = p.createVisualShape(
-        shapeType=p.GEOM_SPHERE,
-        radius=0.02,  # 球体半径
-        rgbaColor=[1, 0, 0, 1] ) # 红色球体作为目标位置
-        # 在目标位置创建一个球体
-        self.ball_id = p.createMultiBody(
-        baseMass=0,  # 质量为0，静态物体
-        baseVisualShapeIndex=ball_visual,
-        basePosition=self.target_position)
-
+        #创建目标位置小球
+        
+        self.ball_id = self.create_custom_sphere(
+            position=self.target_position, 
+            radius=0.02, 
+            mass=0, 
+            color=[1, 0, 0, 1])
+       
         #创建障碍物球体
-        obstacle_visual = p.createVisualShape(
-        shapeType=p.GEOM_SPHERE,
-        radius=0.1,  # 球体半径
-        rgbaColor=[0, 0, 0.3, 1] ) # 蓝色球体作为障碍物
-        # 在目标位置创建一个球体
-        self.obstacle_id = p.createMultiBody(
-        baseMass=0,  # 质量为0，静态物体
-        baseVisualShapeIndex=obstacle_visual,
-        basePosition=self.obstacle_position)
+        self.obstacle_id = self.create_custom_sphere(
+            position=self.obstacle_position, 
+            radius=0.1, 
+            mass=0, 
+            color=[0, 0, 0.3, 1])   
+        
+        # 设置障碍物速度
+        self.set_sphere_velocity( self.obstacle_id, linear_velocity=[0.02, 0, 0])  # 设置障碍物的线速度
+        
 
         # 计算目标关节角度
         _, self.target_orn = self._get_end_effector_pose()  # 获取末端执行器的当前姿态
@@ -446,22 +453,30 @@ class UR5RobotiqEnv(gym.Env):
                 velocityGain=0.1   # 设置速度增益
             )
         
-        new_obstacle_position = self._obstacle_random_move(self.obstacle_position)  # 障碍物随机移动
-        self.obstacle_position = new_obstacle_position
+        # new_obstacle_position = self._obstacle_random_move(self.obstacle_position)  # 障碍物随机移动
+        new_obstacle_position, _ = p.getBasePositionAndOrientation(self.obstacle_id)  # 获取当前障碍物位置
+        x_range = [-0.4, 0.3]#障碍物生成区域
+        y_range = [0.3, 0.8]
+        if new_obstacle_position[0] < x_range[0] or new_obstacle_position[0] > x_range[1] or \
+           new_obstacle_position[1] < y_range[0] or new_obstacle_position[1] > y_range[1]:
+            # 如果障碍物位置超出范围，则重新生成
+            self.set_sphere_velocity(self.obstacle_id, linear_velocity=[-0.02, 0, 0])  # 设置障碍物的线速度
+        
+        # self.obstacle_position = new_obstacle_position
 
-        # 清除之前的障碍物
-        if self.obstacle_id is not None:
-            p.removeBody(self.obstacle_id)
-        #创建障碍物球体
-        obstacle_visual = p.createVisualShape(
-        shapeType=p.GEOM_SPHERE,
-        radius=0.1,  # 球体半径
-        rgbaColor=[0, 0, 0.3, 1] ) # 蓝色球体作为障碍物
-        # 在目标位置创建一个球体
-        self.obstacle_id = p.createMultiBody(
-        baseMass=0,  # 质量为0，静态物体
-        baseVisualShapeIndex=obstacle_visual,
-        basePosition=new_obstacle_position)
+        # # 清除之前的障碍物
+        # if self.obstacle_id is not None:
+        #     p.removeBody(self.obstacle_id)
+        # #创建障碍物球体
+        # obstacle_visual = p.createVisualShape(
+        # shapeType=p.GEOM_SPHERE,
+        # radius=0.1,  # 球体半径
+        # rgbaColor=[0, 0, 0.3, 1] ) # 蓝色球体作为障碍物
+        # # 在目标位置创建一个球体
+        # self.obstacle_id = p.createMultiBody(
+        # baseMass=0,  # 质量为0，静态物体
+        # baseVisualShapeIndex=obstacle_visual,
+        # basePosition=new_obstacle_position)
 
         # 执行仿真步
         for _ in range(100):
