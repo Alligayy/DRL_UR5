@@ -23,7 +23,7 @@ class UR5Robotiq85:# UR5 with Robotiq 85 gripper
         self.max_velocity = 10
 
     def load(self):
-        self.id = p.loadURDF('./urdf/ur5_robotiq_85.urdf', self.base_pos, self.base_ori, useFixedBase=True)
+        self.id = p.loadURDF('./urdf/new_ur5_robotiq_85.urdf', self.base_pos, self.base_ori, useFixedBase=True)
         self.__parse_joint_info__()
         self.__setup_mimic_joints__()
 
