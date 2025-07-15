@@ -3,13 +3,13 @@ from stable_baselines3 import PPO, SAC,A2C
 import time
 from stable_baselines3.her.her_replay_buffer import HerReplayBuffer
 def test():
-    # Initialize the environment
-    env = UR5RobotiqEnv()  # Instantiate the custom driving environment
+    # 初始化UR5机器人环境
+    env = UR5RobotiqEnv()  # 创建UR5机器人环境实例
     
-    # Predefine the algorithm to use (PPO, SAC, or A2C)
-    algo_name = "SAC"  # Set the algorithm to use (SAC, PPO, or A2C)
+    # 选择要使用的算法 (SAC, PPO, or A2C)
+    algo_name = "SAC"  # 设置要使用的算法名称， "PPO", "SAC", 或 "A2C"
     if algo_name == "PPO":
-        model = PPO("MultiInputPolicy", env, verbose=1)  # Choose PPO if specified
+        model = PPO("MultiInputPolicy", env, verbose=1)  
     elif algo_name == "SAC":
         model = SAC("MultiInputPolicy",
                     env,
@@ -19,32 +19,32 @@ def test():
                         goal_selection_strategy="future",  # 或者"final"
                         n_sampled_goal=4,                  # 每个transition采样的额外目标数
                         )
-                )  # Choose SAC if specified
+                )  
     elif algo_name == "A2C":
-        model = A2C("MultiInputPolicy", env, verbose=1)  # Choose A2C if specified
+        model = A2C("MultiInputPolicy", env, verbose=1)  
     else:
-        raise ValueError("Invalid algorithm name. Please choose 'PPO', 'SAC', or 'A2C'.")  # Raise an error if an invalid algorithm is specified
+        raise ValueError("Invalid algorithm name. Please choose 'PPO', 'SAC', or 'A2C'.")  
 
-    # Load the trained model
+    # 加载预训练模型
     model = model.load(f"./models/ur_robot_{algo_name.lower()}_100000_steps", env=env)
 
-    # Reset the environment and get the initial observation
+    # 重置环境以开始测试
     obs, info = env.reset()
 
-    # Test the trained model
+    # 开始测试循环
     while True:
-        # Use the model to predict the next action based on the current observation
+        # 获取当前观测值
         action, _ = model.predict(obs, deterministic=True)
         
-        # Sleep for 1/300 seconds to control the speed of the simulation
-        time.sleep(1/300)
         
-        # Execute the action and get the next state
+        time.sleep(1/240)
+        
+        # 执行动作并获取下一个观测值、奖励、终止状态和截断状态
         obs, reward, terminated, truncated, info = env.step(action)
         
-        # If the environment reaches termination or truncation, reset it
+        # 检测是否终止
         if terminated or truncated:
             obs, info = env.reset()
 
 if __name__ == '__main__':
-    test()  #test the model
+    test()  
