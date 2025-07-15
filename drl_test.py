@@ -1,7 +1,7 @@
 from env import  UR5RobotiqEnv
 from stable_baselines3 import PPO, SAC,A2C
 import time
-
+from stable_baselines3.her.her_replay_buffer import HerReplayBuffer
 def test():
     # Initialize the environment
     env = UR5RobotiqEnv()  # Instantiate the custom driving environment
@@ -9,16 +9,24 @@ def test():
     # Predefine the algorithm to use (PPO, SAC, or A2C)
     algo_name = "SAC"  # Set the algorithm to use (SAC, PPO, or A2C)
     if algo_name == "PPO":
-        model = PPO("MlpPolicy", env, verbose=1)  # Choose PPO if specified
+        model = PPO("MultiInputPolicy", env, verbose=1)  # Choose PPO if specified
     elif algo_name == "SAC":
-        model = SAC("MlpPolicy", env, verbose=1)  # Choose SAC if specified
+        model = SAC("MultiInputPolicy",
+                    env,
+                    verbose=1,
+                    replay_buffer_class= HerReplayBuffer,
+                    replay_buffer_kwargs=dict(
+                        goal_selection_strategy="future",  # 或者"final"
+                        n_sampled_goal=4,                  # 每个transition采样的额外目标数
+                        )
+                )  # Choose SAC if specified
     elif algo_name == "A2C":
-        model = A2C("MlpPolicy", env, verbose=1)  # Choose A2C if specified
+        model = A2C("MultiInputPolicy", env, verbose=1)  # Choose A2C if specified
     else:
         raise ValueError("Invalid algorithm name. Please choose 'PPO', 'SAC', or 'A2C'.")  # Raise an error if an invalid algorithm is specified
 
     # Load the trained model
-    model = model.load(f"./models/ur_robot_{algo_name.lower()}_100000_steps")
+    model = model.load(f"./models/ur_robot_{algo_name.lower()}_100000_steps", env=env)
 
     # Reset the environment and get the initial observation
     obs, info = env.reset()

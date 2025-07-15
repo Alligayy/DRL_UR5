@@ -420,11 +420,11 @@ class UR5RobotiqEnv(gym.Env):
         action = np.clip(action, -self.acceleration_limits, self.acceleration_limits)
 
         # 只使用前6个关节的动作
-        if len(action) > 6:
-            action = action[:6]
-        if len(joint_angles) > 6:
-            joint_angles = joint_angles[:6]
-            joint_velocities = joint_velocities[:6]
+        # if len(action) > 6:
+        #     action = action[:6]
+        # if len(joint_angles) > 6:
+        #     joint_angles = joint_angles[:6]
+        #     joint_velocities = joint_velocities[:6]
         
         # 计算新的关节速度
         # 使用动作（加速度）更新关节速度
