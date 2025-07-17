@@ -37,7 +37,7 @@ def train():
             env,
             verbose=1,
             #batch_size=512,  # 设置批量大小
-            learning_starts=200, # 设置开始更新网络的步数
+            learning_starts=2000, # 设置开始更新网络的步数
             replay_buffer_class= HerReplayBuffer,
             replay_buffer_kwargs=dict(
                 goal_selection_strategy="future",  # 或者"final"

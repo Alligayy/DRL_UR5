@@ -20,11 +20,10 @@ class UR5RobotiqEnv(gym.Env):
         # 仿真时间步长1/240s
         p.setTimeStep(1.0/240.0)
 
-
         self.dt = 1.0/240.0# PyBullet默认时间步长，用于仿真
-        self.time_step = 0.1  #时间步长
+        self.time_step = 1.0/240.0  #时间步长
         # 设置最大步数
-        self.max_steps = 100
+        self.max_steps = 1000
         self.current_step = 0
         self.reward_type = reward_type # 奖励类型， 稀疏奖励'sparse' or 'dense'稠密奖励
         
@@ -98,8 +97,8 @@ class UR5RobotiqEnv(gym.Env):
         生成随机目标位置
         """
         # 随机生成目标位置
-        x_range = [0.4, 0.5]#目标点生成区域
-        y_range = [0.3, 0.5]
+        x_range = [0.5, 0.7]#目标点生成区域
+        y_range = [0.3, 0.6]
         z_range = [0.65, 0.8]
         target_pos = [
             np.random.uniform(x_range[0], x_range[1]),  
@@ -113,8 +112,8 @@ class UR5RobotiqEnv(gym.Env):
         生成随机障碍物位置
         """
         # 随机生成障碍物位置
-        x_range = [-0.4, 0.3]#障碍物生成区域
-        y_range = [0.3, 0.8]
+        x_range = [-0.5, 0.3]#障碍物生成区域
+        y_range = [0.4, 0.7]
         z = 0.72
         obstacle_pos = [
             np.random.uniform(x_range[0], x_range[1]),  
@@ -369,7 +368,6 @@ class UR5RobotiqEnv(gym.Env):
         # 设置障碍物速度
         self.set_sphere_velocity( self.obstacle_id, linear_velocity=[0.02, 0, 0])  # 设置障碍物的线速度
         
-
         # 计算目标关节角度
         _, self.target_orn = self._get_end_effector_pose()  # 获取末端执行器的当前姿态
         self.target_joints = self.cal_arm_ik(target_pos=self.target_position, target_orn=self.target_orn) #姿态默认
@@ -448,36 +446,22 @@ class UR5RobotiqEnv(gym.Env):
                 jointIndex=joint_id,
                 controlMode=p.POSITION_CONTROL,
                 targetPosition=new_joint_angles[i],
-                force=500,  # 设置一个合适的力
+                targetVelocity=new_joint_velocities[i],
+                force=500,#设置力矩
                 positionGain=0.1,  # 设置位置增益
-                velocityGain=0.1   # 设置速度增益
+                velocityGain=0.1   # 设置速度增益，必须设置
             )
-        
-        # new_obstacle_position = self._obstacle_random_move(self.obstacle_position)  # 障碍物随机移动
+
         new_obstacle_position, _ = p.getBasePositionAndOrientation(self.obstacle_id)  # 获取当前障碍物位置
-        x_range = [-0.4, 0.3]#障碍物生成区域
-        y_range = [0.3, 0.8]
-        if new_obstacle_position[0] < x_range[0] or new_obstacle_position[0] > x_range[1] or \
-           new_obstacle_position[1] < y_range[0] or new_obstacle_position[1] > y_range[1]:
-            # 如果障碍物位置超出范围，则重新生成
-            self.set_sphere_velocity(self.obstacle_id, linear_velocity=[-0.02, 0, 0])  # 设置障碍物的线速度
+        x_range = [-0.5, 0.3]#障碍物生成区域
+        y_range = [0.4, 0.7]
         
-        # self.obstacle_position = new_obstacle_position
+        if new_obstacle_position[0] < x_range[0]:
+            self.set_sphere_velocity(self.obstacle_id, linear_velocity=[0.02, 0, 0])  # 障碍物向左移动
+        elif new_obstacle_position[0] > x_range[1]:
+            self.set_sphere_velocity(self.obstacle_id, linear_velocity=[-0.02, 0, 0])  # 障碍物向右移动
 
-        # # 清除之前的障碍物
-        # if self.obstacle_id is not None:
-        #     p.removeBody(self.obstacle_id)
-        # #创建障碍物球体
-        # obstacle_visual = p.createVisualShape(
-        # shapeType=p.GEOM_SPHERE,
-        # radius=0.1,  # 球体半径
-        # rgbaColor=[0, 0, 0.3, 1] ) # 蓝色球体作为障碍物
-        # # 在目标位置创建一个球体
-        # self.obstacle_id = p.createMultiBody(
-        # baseMass=0,  # 质量为0，静态物体
-        # baseVisualShapeIndex=obstacle_visual,
-        # basePosition=new_obstacle_position)
-
+        
         # 执行仿真步
         for _ in range(100):
             p.stepSimulation()
